@@ -1,0 +1,488 @@
+#include <Adafruit_NeoPixel.h>
+
+/* PeterThePumpkin
+ 
+ incorporating code snippets from BARRAGAN <http://barraganstudio.com>
+ modified 8 Nov 2013
+ by Scott Fitzgerald
+ http://www.arduino.cc/en/Tutorial/Sweep
+
+and xxx
+
+*/
+
+#include <Servo.h>
+
+#define WS2812_PIN 7
+      // Parameter 1 = number of pixels in strip
+      // Parameter 2 = pin number (most are valid)
+      // Parameter 3 = pixel type flags, add together as needed:
+      //   NEO_KHZ800  800 KHz bitstream (most NeoPixel products w/WS2812 LEDs)
+      //   NEO_KHZ400  400 KHz (classic 'v1' (not v2) FLORA pixels, WS2811 drivers)
+      //   NEO_GRB     Pixels are wired for GRB bitstream (most NeoPixel products)
+      //   NEO_RGB     Pixels are wired for RGB bitstream (v1 FLORA pixels, not v2)
+      Adafruit_NeoPixel strip = Adafruit_NeoPixel(4, WS2812_PIN, NEO_GRB + NEO_KHZ800);
+
+#define BAUDRATE (9600)
+#define STEP_PIN 5
+#define DIR_PIN 4
+#define PIR_PIN 8
+
+Servo leftEye;  // create servo object
+Servo rightEye;  // create servo object
+
+int pos = 0;    // variable to store the servo position
+
+enum  direction_t{
+  centreright=0,
+  rightcentre=1,
+  centreleft=2,
+  leftcentre=3,
+  centre=4,
+};
+
+enum  mode_t{
+  sharethescare=0,
+  servotest=1,
+  WS2812test=2,
+  devtest=3,
+  eyesA=4,
+  rotate_test=5,
+  ShareTheScare=6,
+  TestUART=7,
+};
+
+  enum mode_t thisMode=ShareTheScare;
+
+/*******************************************
+*             ARDUINO SETUP
+********************************************/
+void setup() {
+  pinMode(STEP_PIN,OUTPUT); 
+  pinMode(DIR_PIN,OUTPUT);
+  pinMode(PIR_PIN,INPUT);
+  
+  int step_delay=15;
+  leftEye.attach(9);  // attaches the servo on pin 9 to the servo object
+  rightEye.attach(10);
+  
+  MoveEyesTo(centre,15); 
+
+
+  strip.begin();
+  strip.show(); // Initialize all pixels to 'off'
+
+  Serial.begin(BAUDRATE);
+  Serial.print("Welcome to Share The Scare.");
+  
+  pinMode(6,OUTPUT); // Enable op
+  pinMode(5,OUTPUT); // Step op
+  pinMode(4,OUTPUT); // Direction op
+  digitalWrite(6,LOW); // Enable
+
+  delay(2000);
+  
+}
+
+/*******************************************
+*             MAIN LOOP
+********************************************/
+void loop() {
+
+  //Servo Test
+  if (thisMode==servotest){
+    MoveEyesTo(centreright,15);
+    MoveEyesTo(rightcentre,15);
+    MoveEyesTo(centreleft,15);
+    MoveEyesTo(leftcentre,15);
+    delay(2000);
+  }
+
+/*******************************************
+*             TEST WS2812
+********************************************/
+  //WS2812 test
+  if (thisMode==WS2812test){
+    
+    uint32_t greenishwhite = strip.Color(0, 64, 0);
+    int iRed;
+    int iGreen;
+    int iBlue;
+    int step=2;
+    
+    strip.setPixelColor(0, iRed, iGreen, iBlue);    
+    strip.setPixelColor(1, iRed, iGreen, iBlue);
+    strip.setPixelColor(2, iRed, iGreen, iBlue);
+    strip.setPixelColor(3, iRed, iGreen, iBlue);
+    strip.show();
+
+    while(1){
+
+      iRed=255;
+      iGreen=255;
+      iBlue=0;
+      
+      for (int i=255; i>0; i=i-1){
+        if (iRed>step) iRed=iRed-step;
+        if (iGreen>step) iGreen=iGreen-step;
+        if (iBlue>step) iBlue=iBlue-step;
+        strip.setPixelColor(0, iRed, iGreen, iBlue);    
+        strip.setPixelColor(1, iRed, iGreen, iBlue);
+        strip.setPixelColor(2, iRed, iGreen, iBlue);
+        strip.setPixelColor(3, iRed, iGreen, iBlue);
+        strip.show();
+        delay(10);
+      }
+      
+
+  }
+}
+
+/*******************************************
+*             INITIAL EFFECTS COMBINED
+********************************************/
+  //actual effects combined
+  if (thisMode==devtest){
+
+    //Initial position of head (stepper motor)
+    digitalWrite(6,LOW); // Set Enable low
+    digitalWrite(4,HIGH); // Set Direction as high
+
+    
+    static int posHeadStart=90;
+    static int posHeadFinish=180;  
+    int pos=posHeadStart;
+
+    static int duration =1000;     //duration of combined movements in ms
+    static int stepSize = 10;
+
+    //Initial Brightness of eyes
+    strip.setPixelColor(0, 20, 20, 0);
+    strip.setPixelColor(1, 20, 20, 0);
+    strip.setPixelColor(2, 20, 20, 0);
+    strip.setPixelColor(3, 20, 20, 0);
+    strip.show();
+    
+    //Main cycle
+    while(1){
+      
+      //Wait for trigger
+      if(1){
+
+        //Initial flash?
+
+        //Initial movement of head
+        for (int head=0; head<200; head++){
+          digitalWrite(5,HIGH); // Output high
+          delay(10); // Wait
+          digitalWrite(5,LOW); // Output low
+          delay(10); // Wait
+        }
+
+        //Initial illumination?
+        int iRed=255;
+        int iGreen=255;
+        int iBlue=0;
+        int fade=1;
+        strip.setPixelColor(0, iRed, iGreen, iBlue);
+        strip.setPixelColor(1, iRed, iGreen, iBlue);
+        strip.setPixelColor(2, iRed, iGreen, iBlue);
+        strip.setPixelColor(3, iRed, iGreen, iBlue);
+        strip.show();        
+          for (int ledFade=0; ledFade<255; ledFade++){
+            if (iRed>0) iRed=iRed-fade;
+            if (iBlue>0) iBlue=iBlue-fade;
+            if (iGreen>0) iGreen=iGreen-fade;
+            strip.setPixelColor(0, iRed, iGreen, iBlue);
+            strip.setPixelColor(1, iRed, iGreen, iBlue);
+            strip.setPixelColor(2, iRed, iGreen, iBlue);
+            strip.setPixelColor(3, iRed, iGreen, iBlue); 
+            strip.show();
+            delay(10);
+          }
+
+        
+        //Initial eye movement
+        MoveEyesTo(centreright,15);
+
+
+        
+        int deltaHead = (posHeadFinish - posHeadStart)/ (duration/stepSize);
+        int deltaEyes = 2; //?????????????
+        //Combined Movement
+        for (int i=0; i<duration; i=i+stepSize){
+          
+          
+        }//Combined loop
+
+        
+
+
+        
+      }//end of trigger
+      
+    //Pause
+    delay(5000);
+      
+    //Reset positions
+
+      
+    }//repeat main cycle
+
+  }//actual effects combined
+
+/*******************************************
+*             TEST EYES
+********************************************/
+if (thisMode==eyesA){
+
+  int posLeft=90;
+  int posRight=90;
+
+      leftEye.write(posLeft);
+      rightEye.write(posRight); 
+
+      delay(500);
+      leftEye.write(posLeft-10);
+      rightEye.write(posRight-10); 
+
+      delay(500);
+      leftEye.write(posLeft+10);
+      rightEye.write(posRight+10); 
+
+      delay(500);
+  
+}//eyesA
+
+/*******************************************
+*             TEST ROTATE
+********************************************/
+if (thisMode==rotate_test){
+  digitalWrite(DIR_PIN,HIGH); 
+  // 200 pulses =o 90 degrees due to 4:1 ratio
+  for(int x = 0; x < 200; x++) {
+    digitalWrite(STEP_PIN,HIGH); 
+    delay(50); 
+    digitalWrite(STEP_PIN,LOW); 
+    delay(50); 
+  }
+  delay(1000); 
+  
+  digitalWrite(DIR_PIN,LOW); 
+  for(int x = 0; x < 200; x++) {
+    digitalWrite(STEP_PIN,HIGH);
+    delay(50);
+    digitalWrite(STEP_PIN,LOW);
+    delay(50);
+  }
+  delay(1000);
+
+  
+}//end rotate_test
+
+/*******************************************
+*             SHARE_THE_SCARE
+********************************************/
+if (thisMode==ShareTheScare){
+
+  //test flash
+  for (int flashes=0; flashes<5; flashes++){
+      EyeColour(255,0,0);
+      delay (1000);
+      EyeColour(0,255,0);
+      delay (1000);
+  }
+  EyeColour(0,0,0);
+  Serial.print("ShareTheScare\n");
+     
+  int iRed=255;
+  int iGreen=255;
+  int iBlue=0;
+
+  int posLeft=90;
+  int posRight=90;
+  
+  
+  while(1){
+
+
+
+    Serial.print("Waiting  for trigger....\n");
+    if(digitalRead(PIR_PIN)==HIGH){
+      Serial.print("Triggered...\n");
+
+
+      //Slew eyes around first
+      EyesFlash();
+      delay(5);
+      EyesFlash();
+      delay(15);
+      EyesFlash();
+      delay(5);      
+      EyesFlash();
+      for (int delta=40; delta>0; delta=delta-5){
+        leftEye.write(posLeft+delta);
+        rightEye.write(posRight+delta); 
+        delay(5);
+        EyesFlash();
+      }
+
+      
+
+      
+      //rotate head
+      digitalWrite(DIR_PIN,LOW); 
+      // 200 pulses =o 90 degrees due to 4:1 ratio
+      for(int x = 0; x < 255; x=x+2) {
+        digitalWrite(STEP_PIN,HIGH); 
+        delay(30); 
+        digitalWrite(STEP_PIN,LOW); 
+        delay(30); 
+  
+        //brighten eyes
+        EyeColour(x,x,0);
+   
+      }
+    
+      //move eyes about
+      for (int iEyes=0; iEyes<2;iEyes++){
+
+        for (int delta=-40; delta<40; delta++){
+          leftEye.write(posLeft+delta);
+          rightEye.write(posRight+delta); 
+          delay(50);
+        }
+        EyesFlash();EyesFlash();EyesFlash();
+        EyeColour(255,255,0);
+
+        for (int delta=40; delta>-40; delta--){
+          leftEye.write(posLeft+delta);
+          rightEye.write(posRight+delta); 
+          delay(50);
+        }
+        EyesFlash();EyesFlash();EyesFlash();EyesFlash();
+        EyeColour(255,255,0);
+      }
+        for (int delta=-40; delta<0; delta++){
+          leftEye.write(posLeft+delta);
+          rightEye.write(posRight+delta); 
+          delay(10);
+          EyesFlash();
+        }
+      
+        
+    
+      //reset eyes, head, lights off
+      digitalWrite(DIR_PIN,HIGH); 
+      // 200 pulses =90 degrees due to 4:1 ratio
+      for(int x = 0; x < 255; x=x+2) {
+        digitalWrite(STEP_PIN,HIGH); 
+        delay(50); 
+        digitalWrite(STEP_PIN,LOW); 
+        delay(50);
+
+        EyeColour(255-x,255-x,0);
+         
+      }
+
+      //Park eyes
+      for (int delta=0; delta<40; delta++){
+        leftEye.write(posLeft+delta);
+        rightEye.write(posRight+delta); 
+        delay(10);
+      }
+    
+      delay(5000);  //reset delay
+    
+    
+    }//if
+  }//while 1
+  
+}//ShareTheScare
+
+
+if (thisMode=TestUART){
+
+  while(1){
+    Serial.write('x');
+  }
+  
+}
+
+}//loop
+
+
+
+
+
+
+void MoveEyesTo (direction_t direction, int time_delay){
+int pos_min=0;
+int pos_max=0;
+signed int step = 0;
+
+  switch(direction){
+    case(centreright):
+      pos_min= 90;
+      pos_max=180;
+      step=1;
+      break;
+    case(rightcentre):
+      pos_min= 180;
+      pos_max=90;
+      step=-1;
+      break;
+    case(centreleft):
+      pos_min= 90;
+      pos_max=0;
+      step=-1;
+      break;
+    case(leftcentre):
+      pos_min= 0;
+      pos_max=90;
+      step=1;
+      break;
+    default:
+      pos_min= 90;
+      pos_max=90;
+      step=1;
+      break;
+  }
+  
+  leftEye.write(pos_min);
+  rightEye.write(pos_min); 
+  
+  if (step>0){        //CW movements
+    for (int pos = pos_min; pos <= pos_max; pos += step) { 
+      leftEye.write(pos);
+      rightEye.write(pos); 
+      delay(time_delay); 
+    }  
+  }
+  else
+      for (int pos = pos_min; pos >= pos_max; pos += step) { 
+      leftEye.write(pos);
+      rightEye.write(pos); 
+      delay(time_delay); 
+    }
+    
+  return;
+}
+
+void EyeColour(int Red, int Green, int Blue){
+
+  strip.setPixelColor(0, Red,Green, Blue);    
+  strip.setPixelColor(1, Red, Green, Blue);
+  strip.setPixelColor(2, Red,Green, Blue);
+  strip.setPixelColor(3, Red, Green, Blue);
+  strip.show();
+}
+
+
+void EyesFlash(void){
+  EyeColour(255,255,255);
+  delay(10);
+  EyeColour(0,0,0);  
+  delay(10);
+}
+
